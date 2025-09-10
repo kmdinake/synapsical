@@ -1,40 +1,92 @@
 # Synapsical - Azure Synapse SqlPool .NET Client Library
-Synapsical is a .NET Client Library enables .NET developers to connect to Azure Synapse Analytics SQL Pools and perform CRUD operations on tables and data. The library supports both direct ADO.NET-style operations and seamless integration with Entity Framework Core (EF Core), allowing developers to use familiar LINQ and DbContext patterns as with SQL Server.
+Synapsical is a .NET Client Library that enables .NET developers to connect to Azure Synapse Analytics SQL Pools and perform CRUD operations on tables and data. The library supports multiple authentication modes, including Azure AD (with or without MFA), SQL authentication, and service principals. It provides an async-first, thread-safe API for scalable applications.
 
 ## Features
-- **Connect to Synapse SQL Pools** using Azure AD or SQL authentication.
+- **Connect to Synapse SQL Pools** using Azure AD (all modes), SQL authentication, or service principal.
 - **Perform CRUD operations** on tables and data.
-- **EF Core integration** for code-first and database-first development.
 - **Async-first API** for scalable applications.
 - **Thread-safe** client design.
-- **Extensible** for future Synapse features.
+- **Extensible** via connection factory abstraction for custom authentication or connection logic.
 
 ## Getting Started
-Prerequisites
+**Prerequisites**
 - .NET 6.0 or later
 - Azure Synapse Analytics workspace with a dedicated SQL Pool
-- Azure Active Directory credentials or SQL authentication credentials
+- Appropriate credentials for your chosen authentication mode
 
-Installation
+**Installation**
 Install via NuGet:
 ```shell
 dotnet add package Synapsical.Synapse.SqlPool.Client
 ```
 
-## Usage (ADO.NET Style)
+## Usage
+### Instantiating the Client with Different Authentication Modes
 ```csharp
-using Synapse.SqlPool.Client;
+using Synapsical.Synapse.SqlPool.Client;
 using Azure.Identity;
+using Azure.Core;
 
-// Authenticate with Azure AD
-var credential = new DefaultAzureCredential();
-var sqlPoolClient = new SynapseSqlPoolClient("<sqlpool-endpoint>", credential);
+// SQL Authentication
+var sqlClient = new SynapseSqlPoolClient(
+    sqlPoolEndpoint: "<server>.database.windows.net",
+    database: "<db>",
+    authMode: SqlAuthMode.SqlPassword,
+    username: "<user>",
+    password: "<password>"
+);
 
+// Azure AD Password
+var aadPasswordClient = new SynapseSqlPoolClient(
+    sqlPoolEndpoint: "<server>.database.windows.net",
+    database: "<db>",
+    authMode: SqlAuthMode.ActiveDirectoryPassword,
+    username: "<aaduser@domain.com>",
+    password: "<aadpassword>"
+);
+
+// Azure AD Integrated
+var aadIntegratedClient = new SynapseSqlPoolClient(
+    sqlPoolEndpoint: "<server>.database.windows.net",
+    database: "<db>",
+    authMode: SqlAuthMode.ActiveDirectoryIntegrated
+);
+
+// Azure AD Interactive (MFA)
+var aadInteractiveClient = new SynapseSqlPoolClient(
+    sqlPoolEndpoint: "<server>.database.windows.net",
+    database: "<db>",
+    authMode: SqlAuthMode.ActiveDirectoryInteractive,
+    username: "<aaduser@domain.com>"
+);
+
+// Azure AD Service Principal
+var spClient = new SynapseSqlPoolClient(
+    sqlPoolEndpoint: "<server>.database.windows.net",
+    database: "<db>",
+    authMode: SqlAuthMode.ActiveDirectoryServicePrincipal,
+    clientId: "<client-id>",
+    password: "<client-secret>",
+    tenantId: "<tenant-id>"
+);
+
+// Azure AD TokenCredential (e.g., DefaultAzureCredential)
+TokenCredential credential = new DefaultAzureCredential();
+var tokenClient = new SynapseSqlPoolClient(
+    sqlPoolEndpoint: "<server>.database.windows.net",
+    database: "<db>",
+    authMode: SqlAuthMode.AccessToken,
+    credential: credential
+);
+```
+
+### CRUD Operations
+```csharp
 // Create a table
-await sqlPoolClient.CreateTableAsync("Employees", "(Id INT PRIMARY KEY, Name NVARCHAR(100), Age INT)");
+await sqlClient.CreateTableAsync("Employees", "(Id INT PRIMARY KEY, Name NVARCHAR(100), Age INT)");
 
 // Insert a row
-await sqlPoolClient.InsertRowAsync("Employees", new Dictionary<string, object>
+await sqlClient.InsertRowAsync("Employees", new Dictionary<string, object>
 {
     ["Id"] = 1,
     ["Name"] = "Alice",
@@ -42,91 +94,29 @@ await sqlPoolClient.InsertRowAsync("Employees", new Dictionary<string, object>
 });
 
 // Query rows
-var employees = await sqlPoolClient.QueryAsync("SELECT * FROM Employees WHERE Age > 25");
+var employees = await sqlClient.QueryAsync("SELECT * FROM Employees WHERE Age > 25");
 
 // Update rows
-await sqlPoolClient.UpdateRowsAsync("Employees", "Id = 1", new Dictionary<string, object>
+await sqlClient.UpdateRowsAsync("Employees", "Id = 1", new Dictionary<string, object>
 {
     ["Age"] = 31
 });
 
 // Delete rows
-await sqlPoolClient.DeleteRowsAsync("Employees", "Id = 1");
+await sqlClient.DeleteRowsAsync("Employees", "Id = 1");
 
 // Drop table
-await sqlPoolClient.DropTableAsync("Employees");
+await sqlClient.DropTableAsync("Employees");
 ```
 
-## Usage (Entity Framework Core Style)
-a. Define Entity and DbContext
+## Extensibility: Custom Connection Factories
+You can inject your own `ISqlConnectionFactory` for advanced scenarios (e.g., custom logging, connection pooling, or testability):
 ```csharp
-public class Employee
-{
-    public int Id { get; set; }
-    public string Name { get; set; }
-    public int Age { get; set; }
-}
-
-public class SynapseDbContext : DbContext
-{
-    public DbSet<Employee> Employees { get; set; }
-
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        // Use SQL Server provider with Synapse connection string
-        optionsBuilder.UseSqlServer("<synapse-connection-string>");
-    }
-}
-```
-
-b. CRUD Operations with EF Core
-```csharp
-using (var context = new SynapseDbContext())
-{
-    // Create
-    context.Employees.Add(new Employee { Id = 1, Name = "Alice", Age = 30 });
-    context.SaveChanges();
-
-    // Read
-    var employees = context.Employees.Where(e => e.Age > 25).ToList();
-
-    // Update
-    var emp = context.Employees.First();
-    emp.Age = 31;
-    context.SaveChanges();
-
-    // Delete
-    context.Employees.Remove(emp);
-    context.SaveChanges();
-}
-```
-
-c. Azure AD Authentication with EF Core
-```csharp
-public class SynapseDbContext : DbContext
-{
-    private readonly TokenCredential _credential;
-
-    public SynapseDbContext(TokenCredential credential) 
-    {
-        _credential = credential;
-    }
-
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        var conn = new SqlConnection("<synapse-endpoint>");
-        conn.AccessToken = _credential.GetToken(
-            new TokenRequestContext(new[] { "https://database.windows.net/.default" })
-        ).Token;
-
-        optionsBuilder.UseSqlServer(conn);
-    }
-} 
+var customFactory = new MyCustomSqlConnectionFactory(...);
+var client = new SynapseSqlPoolClient("<server>", customFactory);
 ```
 
 ## API Reference
-SynapseSqlPoolClient
-
 | Method | Description |
 |-|-|
 | `CreateTableAsync(string tableName, string schemaDefinition)` | Creates a new table. |
@@ -139,7 +129,7 @@ SynapseSqlPoolClient
 | `DeleteRowsAsync(string tableName, string whereClause)` | Deletes rows. |
 
 ## Error Handling
-- All methods throw specific exceptions for connection, authentication, and SQL errors
+- All methods throw specific exceptions for connection, authentication, and SQL errors (see `SynapseSqlPoolException`).
 - Errors are logged and can be traced for diagnostics.
 
 ## Thread Safety
@@ -148,11 +138,7 @@ SynapseSqlPoolClient
 
 ## Limitations
 - Some T-SQL features and data types may not be supported by Synapse SQL Pools.
-- EF Core migrations may require customizations for Synapse compatibility.
-
-## Extensibility
-- Future support for stored procedures, bulk operations, and advanced analytics.
-- Extension points for custom authentication and logging.
+- EF Core integration is not provided out-of-the-box, but you can use the connection string with EF Core if needed.
 
 ## Best Practices
 - Use async methods for scalability.
