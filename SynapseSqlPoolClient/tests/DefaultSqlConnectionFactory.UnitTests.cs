@@ -16,7 +16,7 @@ namespace Synapsical.Synapse.SqlPool.Client.Tests
         }
 
         [Fact]
-        public async Task Throws_If_Server_Or_Database_Is_Missing()
+        public void Throws_If_Server_Or_Database_Is_Missing()
         {
             Assert.Throws<ArgumentNullException>(() => new DefaultSqlConnectionFactory(null, "db", SqlAuthMode.SqlPassword));
             Assert.Throws<ArgumentNullException>(() => new DefaultSqlConnectionFactory("server", null, SqlAuthMode.SqlPassword));
