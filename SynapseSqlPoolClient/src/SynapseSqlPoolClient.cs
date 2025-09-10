@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
-using Azure.Core.Diagnostics;
-using Azure.Identity;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 
@@ -21,6 +22,7 @@ namespace Synapsical.Synapse.SqlPool.Client
         private readonly string? _password;
         private readonly ILogger<SynapseSqlPoolClient>? _logger;
         private static readonly string s_diagnosticNamespace = "Synapsical.Synapse.SqlPool.Client";
+        private static DiagnosticSource? _diagnosticListener;
 
         /// <summary>
         /// Initializes a new instance using Azure AD authentication.
@@ -56,15 +58,15 @@ namespace Synapsical.Synapse.SqlPool.Client
             _logger = logger;
         }
 
-        private async Task<SqlConnection> GetOpenConnectionAsync()
+        private async Task<SqlConnection> GetOpenConnectionAsync(CancellationToken cancellationToken = default)
         {
             var conn = new SqlConnection(_connectionString);
             if (_credential != null)
             {
-                var token = await _credential.GetTokenAsync(new TokenRequestContext(new[] { "https://database.windows.net/.default" }));
+                var token = await _credential.GetTokenAsync(new TokenRequestContext(new[] { "https://database.windows.net/.default" }), cancellationToken);
                 conn.AccessToken = token.Token;
             }
-            await conn.OpenAsync();
+            await conn.OpenAsync(cancellationToken);
             return conn;
         }
 
@@ -79,8 +81,9 @@ namespace Synapsical.Synapse.SqlPool.Client
                 throw new ArgumentException("Table name must not be null or empty.", nameof(tableName));
             if (string.IsNullOrWhiteSpace(schemaDefinition))
                 throw new ArgumentException("Schema definition must not be null or empty.", nameof(schemaDefinition));
-            using var scope = new DiagnosticScope($"{s_diagnosticNamespace}.CreateTable", DiagnosticListener.Default, null);
-            scope.Start();
+            var synapseEventName = $"{s_diagnosticNamespace}.CreateTable";
+            _diagnosticListener = new DiagnosticListener($"{s_diagnosticNamespace}.CreateTable");
+            var createTableActivity = _diagnosticListener.StartActivity(new Activity(synapseEventName), new { TableName = tableName, SchemaDefinition = schemaDefinition });
             _logger?.LogInformation("Creating table {TableName}", tableName);
             try
             {
@@ -88,18 +91,19 @@ namespace Synapsical.Synapse.SqlPool.Client
                 using var conn = await GetOpenConnectionAsync();
                 using var cmd = new SqlCommand(sql, conn);
                 await cmd.ExecuteNonQueryAsync();
+                _diagnosticListener.StopActivity(createTableActivity, new { TableName = tableName, SchemaDefinition = schemaDefinition });
                 _logger?.LogInformation("Successfully created table {TableName}", tableName);
             }
             catch (SqlException ex)
             {
                 _logger?.LogError(ex, "Failed to create table {TableName}", tableName);
-                scope.Failed(ex);
+                _diagnosticListener.StopActivity(createTableActivity, new { TableName = tableName, SchemaDefinition = schemaDefinition, Error = ex.Message });
                 throw new SynapseSqlPoolException($"Failed to create table '{tableName}'.", ex);
             }
             catch (ArgumentException ex)
             {
                 _logger?.LogError(ex, "Invalid argument for creating table {TableName}", tableName);
-                scope.Failed(ex);
+                _diagnosticListener.StopActivity(createTableActivity, new { TableName = tableName, SchemaDefinition = schemaDefinition, Error = ex.Message });
                 throw new SynapseSqlPoolException($"Invalid argument for creating table '{tableName}'.", ex);
             }
         }
@@ -112,8 +116,9 @@ namespace Synapsical.Synapse.SqlPool.Client
         {
             if (string.IsNullOrWhiteSpace(tableName))
                 throw new ArgumentException("Table name must not be null or empty.", nameof(tableName));
-            using var scope = new DiagnosticScope($"{s_diagnosticNamespace}.DropTable", DiagnosticListener.Default, null);
-            scope.Start();
+            var synapseEventName = $"{s_diagnosticNamespace}.DropTable";
+            _diagnosticListener = new DiagnosticListener(synapseEventName);
+            var dropTableActivity = _diagnosticListener.StartActivity(new Activity(synapseEventName), new { TableName = tableName });
             _logger?.LogInformation("Dropping table {TableName}", tableName);
             try
             {
@@ -121,12 +126,13 @@ namespace Synapsical.Synapse.SqlPool.Client
                 using var conn = await GetOpenConnectionAsync();
                 using var cmd = new SqlCommand(sql, conn);
                 await cmd.ExecuteNonQueryAsync();
+                _diagnosticListener.StopActivity(dropTableActivity, new { TableName = tableName });
                 _logger?.LogInformation("Successfully dropped table {TableName}", tableName);
             }
             catch (SqlException ex)
             {
                 _logger?.LogError(ex, "Failed to drop table {TableName}", tableName);
-                scope.Failed(ex);
+                _diagnosticListener.StopActivity(dropTableActivity, new { TableName = tableName, Error = ex.Message });
                 throw new SynapseSqlPoolException($"Failed to drop table '{tableName}'.", ex);
             }
         }
@@ -140,8 +146,9 @@ namespace Synapsical.Synapse.SqlPool.Client
         {
             if (string.IsNullOrWhiteSpace(tableName))
                 throw new ArgumentException("Table name must not be null or empty.", nameof(tableName));
-            using var scope = new DiagnosticScope($"{s_diagnosticNamespace}.TableExists", DiagnosticListener.Default, null);
-            scope.Start();
+            var synapseEventName = $"{s_diagnosticNamespace}.TableExists";
+            _diagnosticListener = new DiagnosticListener(synapseEventName);
+            var tableExistsActivity = _diagnosticListener.StartActivity(new Activity(synapseEventName), new { TableName = tableName });
             _logger?.LogInformation("Checking if table {TableName} exists", tableName);
             try
             {
@@ -149,14 +156,16 @@ namespace Synapsical.Synapse.SqlPool.Client
                 using var conn = await GetOpenConnectionAsync();
                 using var cmd = new SqlCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@tableName", tableName);
-                var result = (int)await cmd.ExecuteScalarAsync();
+                var scalarResult = await cmd.ExecuteScalarAsync();
+                int result = scalarResult != null && scalarResult != DBNull.Value ? Convert.ToInt32(scalarResult) : 0;
+                _diagnosticListener.StopActivity(tableExistsActivity, new { TableName = tableName, TableExists = result > 0 });
                 _logger?.LogInformation("Table {TableName} exists: {Exists}", tableName, result > 0);
                 return result > 0;
             }
             catch (SqlException ex)
             {
                 _logger?.LogError(ex, "Failed to check if table {TableName} exists", tableName);
-                scope.Failed(ex);
+                _diagnosticListener.StopActivity(tableExistsActivity, new { TableName = tableName, Error = ex.Message });
                 throw new SynapseSqlPoolException($"Failed to check if table '{tableName}' exists.", ex);
             }
         }
@@ -167,8 +176,9 @@ namespace Synapsical.Synapse.SqlPool.Client
         /// <returns>Enumerable of table names.</returns>
         public async Task<IEnumerable<string>> ListTablesAsync()
         {
-            using var scope = new DiagnosticScope($"{s_diagnosticNamespace}.ListTables", DiagnosticListener.Default, null);
-            scope.Start();
+            var synapseEventName = $"{s_diagnosticNamespace}.ListTables";
+            _diagnosticListener = new DiagnosticListener(synapseEventName);
+            var listTablesActivity = _diagnosticListener.StartActivity(new Activity(synapseEventName), null);
             _logger?.LogInformation("Listing all tables");
             try
             {
@@ -181,13 +191,14 @@ namespace Synapsical.Synapse.SqlPool.Client
                 {
                     tables.Add(reader.GetString(0));
                 }
+                _diagnosticListener.StopActivity(listTablesActivity, new { TableCount = tables.Count });
                 _logger?.LogInformation("Found {Count} tables", tables.Count);
                 return tables;
             }
             catch (SqlException ex)
             {
                 _logger?.LogError(ex, "Failed to list tables");
-                scope.Failed(ex);
+                _diagnosticListener.StopActivity(listTablesActivity, new { Error = ex.Message });
                 throw new SynapseSqlPoolException("Failed to list tables.", ex);
             }
         }
@@ -203,8 +214,9 @@ namespace Synapsical.Synapse.SqlPool.Client
                 throw new ArgumentException("Table name must not be null or empty.", nameof(tableName));
             if (rowData == null || rowData.Count == 0)
                 throw new ArgumentException("Row data must not be null or empty.", nameof(rowData));
-            using var scope = new DiagnosticScope($"{s_diagnosticNamespace}.InsertRow", DiagnosticListener.Default, null);
-            scope.Start();
+            var synapseEventName = $"{s_diagnosticNamespace}.InsertRow";
+            _diagnosticListener = new DiagnosticListener(synapseEventName);
+            var insertRowActivity = _diagnosticListener.StartActivity(new Activity(synapseEventName), new { TableName = tableName });
             _logger?.LogInformation("Inserting row into {TableName}", tableName);
             try
             {
@@ -218,12 +230,13 @@ namespace Synapsical.Synapse.SqlPool.Client
                     cmd.Parameters.AddWithValue("@" + kvp.Key, kvp.Value ?? DBNull.Value);
                 }
                 await cmd.ExecuteNonQueryAsync();
+                _diagnosticListener.StopActivity(insertRowActivity, new { TableName = tableName, InsertedRowCount = rowData.Count });
                 _logger?.LogInformation("Successfully inserted row into {TableName}", tableName);
             }
             catch (SqlException ex)
             {
                 _logger?.LogError(ex, "Failed to insert row into {TableName}", tableName);
-                scope.Failed(ex);
+                _diagnosticListener.StopActivity(insertRowActivity, new { TableName = tableName, Error = ex.Message });
                 throw new SynapseSqlPoolException($"Failed to insert row into '{tableName}'.", ex);
             }
         }
@@ -237,8 +250,9 @@ namespace Synapsical.Synapse.SqlPool.Client
         {
             if (string.IsNullOrWhiteSpace(sqlQuery))
                 throw new ArgumentException("SQL query must not be null or empty.", nameof(sqlQuery));
-            using var scope = new DiagnosticScope($"{s_diagnosticNamespace}.Query", DiagnosticListener.Default, null);
-            scope.Start();
+            var synapseEventName = $"{s_diagnosticNamespace}.Query";
+            _diagnosticListener = new DiagnosticListener(synapseEventName);
+            var queryActivity = _diagnosticListener.StartActivity(new Activity(synapseEventName), null);
             _logger?.LogInformation("Executing query");
             try
             {
@@ -251,17 +265,18 @@ namespace Synapsical.Synapse.SqlPool.Client
                     var row = new Dictionary<string, object>();
                     for (int i = 0; i < reader.FieldCount; i++)
                     {
-                        row[reader.GetName(i)] = await reader.IsDBNullAsync(i) ? null : reader.GetValue(i);
+                        row[reader.GetName(i)] = await reader.IsDBNullAsync(i) ? DBNull.Value : reader.GetValue(i);
                     }
                     results.Add(row);
                 }
+                _diagnosticListener.StopActivity(queryActivity, new { RowCount = results.Count });
                 _logger?.LogInformation("Query returned {Count} rows", results.Count);
                 return results;
             }
             catch (SqlException ex)
             {
                 _logger?.LogError(ex, "Failed to execute query");
-                scope.Failed(ex);
+                _diagnosticListener.StopActivity(queryActivity, new { Error = ex.Message });
                 throw new SynapseSqlPoolException("Failed to execute query.", ex);
             }
         }
@@ -280,8 +295,9 @@ namespace Synapsical.Synapse.SqlPool.Client
                 throw new ArgumentException("Where clause must not be null or empty.", nameof(whereClause));
             if (updatedValues == null || updatedValues.Count == 0)
                 throw new ArgumentException("Updated values must not be null or empty.", nameof(updatedValues));
-            using var scope = new DiagnosticScope($"{s_diagnosticNamespace}.UpdateRows", DiagnosticListener.Default, null);
-            scope.Start();
+            var synapseEventName = $"{s_diagnosticNamespace}.UpdateRows";
+            _diagnosticListener = new DiagnosticListener(synapseEventName);
+            var updateRowsActivity = _diagnosticListener.StartActivity(new Activity(synapseEventName), new { TableName = tableName, WhereClause = whereClause });
             _logger?.LogInformation("Updating rows in {TableName} where {WhereClause}", tableName, whereClause);
             try
             {
@@ -294,12 +310,13 @@ namespace Synapsical.Synapse.SqlPool.Client
                     cmd.Parameters.AddWithValue("@" + kvp.Key, kvp.Value ?? DBNull.Value);
                 }
                 await cmd.ExecuteNonQueryAsync();
+                _diagnosticListener.StopActivity(updateRowsActivity, new { TableName = tableName, WhereClause = whereClause, UpdatedColumnCount = updatedValues.Count });
                 _logger?.LogInformation("Successfully updated rows in {TableName}", tableName);
             }
             catch (SqlException ex)
             {
                 _logger?.LogError(ex, "Failed to update rows in {TableName}", tableName);
-                scope.Failed(ex);
+                _diagnosticListener.StopActivity(updateRowsActivity, new { TableName = tableName, WhereClause = whereClause, Error = ex.Message });
                 throw new SynapseSqlPoolException($"Failed to update rows in '{tableName}'.", ex);
             }
         }
@@ -315,8 +332,9 @@ namespace Synapsical.Synapse.SqlPool.Client
                 throw new ArgumentException("Table name must not be null or empty.", nameof(tableName));
             if (string.IsNullOrWhiteSpace(whereClause))
                 throw new ArgumentException("Where clause must not be null or empty.", nameof(whereClause));
-            using var scope = new DiagnosticScope($"{s_diagnosticNamespace}.DeleteRows", DiagnosticListener.Default, null);
-            scope.Start();
+            var synapseEventName = $"{s_diagnosticNamespace}.DeleteRows";
+            _diagnosticListener = new DiagnosticListener(synapseEventName);
+            var deleteRowsActivity = _diagnosticListener.StartActivity(new Activity(synapseEventName), new { TableName = tableName, WhereClause = whereClause });
             _logger?.LogInformation("Deleting rows from {TableName} where {WhereClause}", tableName, whereClause);
             try
             {
@@ -329,7 +347,7 @@ namespace Synapsical.Synapse.SqlPool.Client
             catch (SqlException ex)
             {
                 _logger?.LogError(ex, "Failed to delete rows from {TableName}", tableName);
-                scope.Failed(ex);
+                _diagnosticListener.StopActivity(deleteRowsActivity, new { TableName = tableName, WhereClause = whereClause, Error = ex.Message });
                 throw new SynapseSqlPoolException($"Failed to delete rows from '{tableName}'.", ex);
             }
         }
