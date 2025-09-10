@@ -30,6 +30,11 @@ namespace Synapsical.Synapse.SqlPool.Client
             string? tenantId = null,
             TokenCredential? credential = null)
         {
+            if (string.IsNullOrWhiteSpace(server))
+                throw new ArgumentNullException(nameof(server));
+            if (string.IsNullOrWhiteSpace(database))
+                throw new ArgumentNullException(nameof(database));
+            
             _server = server;
             _database = database;
             _authMode = authMode;
