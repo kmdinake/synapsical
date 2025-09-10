@@ -1,0 +1,36 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SynapseSqlPoolClient", "SynapseSqlPoolClient", "{0A116ADD-9B6B-8BB9-8443-3BDD195D1087}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SynapseSqlPoolClient", "SynapseSqlPoolClient\src\SynapseSqlPoolClient.csproj", "{CE8A3039-CBCE-0E16-418B-B1678ED48A4B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SynapseSqlPoolClient.Tests", "SynapseSqlPoolClient\tests\SynapseSqlPoolClient.Tests.csproj", "{6B17952C-9264-3E7A-B1D0-8C91FF6AEFD3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CE8A3039-CBCE-0E16-418B-B1678ED48A4B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CE8A3039-CBCE-0E16-418B-B1678ED48A4B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CE8A3039-CBCE-0E16-418B-B1678ED48A4B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CE8A3039-CBCE-0E16-418B-B1678ED48A4B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6B17952C-9264-3E7A-B1D0-8C91FF6AEFD3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6B17952C-9264-3E7A-B1D0-8C91FF6AEFD3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6B17952C-9264-3E7A-B1D0-8C91FF6AEFD3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6B17952C-9264-3E7A-B1D0-8C91FF6AEFD3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{CE8A3039-CBCE-0E16-418B-B1678ED48A4B} = {0A116ADD-9B6B-8BB9-8443-3BDD195D1087}
+		{6B17952C-9264-3E7A-B1D0-8C91FF6AEFD3} = {0A116ADD-9B6B-8BB9-8443-3BDD195D1087}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {57A385BA-6FCE-44B3-8BAD-272CAF70BA33}
+	EndGlobalSection
+EndGlobal
