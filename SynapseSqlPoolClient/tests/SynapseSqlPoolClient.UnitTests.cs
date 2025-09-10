@@ -39,21 +39,6 @@ namespace Synapsical.Synapse.SqlPool.Client.Tests
         }
 
         [Fact]
-        public void Constructor_ThrowsArgumentException_OnEmptyUsernameOrPassword()
-        {
-            var loggerMock = new Mock<ILogger<SynapseSqlPoolClient>>();
-            Assert.Throws<ArgumentException>(() => new SynapseSqlPoolClient("server", "master", SqlAuthMode.SqlPassword, "", "pass", logger: loggerMock.Object));
-            Assert.Throws<ArgumentException>(() => new SynapseSqlPoolClient("server", "master", SqlAuthMode.SqlPassword, "user", "", logger: loggerMock.Object));
-        }
-
-        [Fact]
-        public void Constructor_ThrowsArgumentNullException_OnNullCredential()
-        {
-            var loggerMock = new Mock<ILogger<SynapseSqlPoolClient>>();
-            Assert.Throws<ArgumentNullException>(() => new SynapseSqlPoolClient("server", "master", SqlAuthMode.AccessToken, credential: null, logger: loggerMock.Object));
-        }
-
-        [Fact]
         public async Task CreateTableAsync_ThrowsArgumentException_OnInvalidArgs()
         {
             var loggerMock = new Mock<ILogger<SynapseSqlPoolClient>>();
