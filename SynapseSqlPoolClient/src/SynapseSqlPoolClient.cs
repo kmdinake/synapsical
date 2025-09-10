@@ -16,11 +16,8 @@ namespace Synapsical.Synapse.SqlPool.Client
     /// </summary>
     public class SynapseSqlPoolClient
     {
-        private readonly string _connectionString;
-        private readonly TokenCredential? _credential;
-        private readonly string? _username;
-        private readonly string? _password;
         private readonly ILogger<SynapseSqlPoolClient>? _logger;
+        private readonly ISqlConnectionFactory _connectionFactory;
         private static readonly string s_diagnosticNamespace = "Synapsical.Synapse.SqlPool.Client";
         private static DiagnosticSource? _diagnosticListener;
 
@@ -29,45 +26,48 @@ namespace Synapsical.Synapse.SqlPool.Client
         /// </summary>
         /// <param name="sqlPoolEndpoint">The Synapse SQL Pool endpoint.</param>
         /// <param name="credential">Azure credential.</param>
-        public SynapseSqlPoolClient(string sqlPoolEndpoint, TokenCredential credential, ILogger<SynapseSqlPoolClient>? logger = null)
+        public SynapseSqlPoolClient(
+            string sqlPoolEndpoint,
+            string database = "master",
+            SqlAuthMode authMode = SqlAuthMode.SqlPassword,
+            string? username = null,
+            string? password = null,
+            string? clientId = null,
+            string? tenantId = null,
+            TokenCredential? credential = null,
+            ILogger<SynapseSqlPoolClient>? logger = null)
         {
             if (string.IsNullOrWhiteSpace(sqlPoolEndpoint))
                 throw new ArgumentException("SQL Pool endpoint must not be null or empty.", nameof(sqlPoolEndpoint));
-            _connectionString = $"Server={sqlPoolEndpoint};Database=master;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
-            _credential = credential ?? throw new ArgumentNullException(nameof(credential));
             _logger = logger;
+            _connectionFactory = new DefaultSqlConnectionFactory(
+                sqlPoolEndpoint,
+                database,
+                authMode,
+                username,
+                password,
+                clientId,
+                tenantId,
+                credential);
         }
 
         /// <summary>
-        /// Initializes a new instance using SQL authentication.
+        /// For testing: allows injection of a custom ISqlConnectionFactory.
         /// </summary>
-        /// <param name="sqlPoolEndpoint">The Synapse SQL Pool endpoint.</param>
-        /// <param name="username">SQL username.</param>
-        /// <param name="password">SQL password.</param>
-        public SynapseSqlPoolClient(string sqlPoolEndpoint, string username, string password, ILogger<SynapseSqlPoolClient>? logger = null)
+        /// <summary>
+        /// For testing: allows injection of a custom ISqlConnectionFactory.
+        /// </summary>
+        public SynapseSqlPoolClient(string sqlPoolEndpoint, ISqlConnectionFactory connectionFactory, ILogger<SynapseSqlPoolClient>? logger = null)
         {
             if (string.IsNullOrWhiteSpace(sqlPoolEndpoint))
                 throw new ArgumentException("SQL Pool endpoint must not be null or empty.", nameof(sqlPoolEndpoint));
-            if (string.IsNullOrWhiteSpace(username))
-                throw new ArgumentException("Username must not be null or empty.", nameof(username));
-            if (string.IsNullOrWhiteSpace(password))
-                throw new ArgumentException("Password must not be null or empty.", nameof(password));
-            _connectionString = $"Server={sqlPoolEndpoint};Database=master;User ID={username};Password={password};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
-            _username = username;
-            _password = password;
             _logger = logger;
+            _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
         }
 
         private async Task<SqlConnection> GetOpenConnectionAsync(CancellationToken cancellationToken = default)
         {
-            var conn = new SqlConnection(_connectionString);
-            if (_credential != null)
-            {
-                var token = await _credential.GetTokenAsync(new TokenRequestContext(new[] { "https://database.windows.net/.default" }), cancellationToken);
-                conn.AccessToken = token.Token;
-            }
-            await conn.OpenAsync(cancellationToken);
-            return conn;
+            return await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         }
 
         /// <summary>
@@ -353,9 +353,4 @@ namespace Synapsical.Synapse.SqlPool.Client
         }
     }
 
-    // Custom exceptions for error handling
-    public class SynapseSqlPoolException : Exception
-    {
-        public SynapseSqlPoolException(string message, Exception? inner = null) : base(message, inner) { }
-    }
 }
