@@ -5,7 +5,7 @@ using Synapsical.Synapse.SqlPool.Client;
 
 namespace Synapsical.Synapse.SqlPool.Client.Examples
 {
-    public class UsageExamples
+    public class AuthModeUsageExample
     {
         public void SqlPasswordExample()
         {
