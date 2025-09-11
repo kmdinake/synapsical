@@ -65,7 +65,7 @@ namespace Synapsical.Synapse.SqlPool.Client
             _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
         }
 
-        private async Task<SqlConnection> GetOpenConnectionAsync(CancellationToken cancellationToken = default)
+        public async Task<SqlConnection> GetOpenConnectionAsync(CancellationToken cancellationToken = default)
         {
             return await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         }
