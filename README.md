@@ -109,6 +109,61 @@ await sqlClient.DeleteRowsAsync("Employees", "Id = 1");
 await sqlClient.DropTableAsync("Employees");
 ```
 
+## Usage with Entity Framework Core
+You can use SynapseSqlPoolClient to provide a connection for EF Core. Use the provided extension method:
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using Synapsical.Synapse.SqlPool.Client;
+
+var client = new SynapseSqlPoolClient(
+    sqlPoolEndpoint: "<server>.database.windows.net",
+    database: "<db>",
+    authMode: SqlAuthMode.SqlPassword,
+    username: "<user>",
+    password: "<password>"
+);
+
+var optionsBuilder = new DbContextOptionsBuilder<MyDbContext>();
+await optionsBuilder.UseSynapseSqlPoolClientAsync(client);
+
+using var context = new MyDbContext(optionsBuilder.Options);
+// Now use your context as usual
+```
+
+### Advanced EF Core Usage
+
+**Context Pooling:**
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
+using Synapsical.Synapse.SqlPool.Client;
+
+var client = new SynapseSqlPoolClient(...);
+var conn = await client.GetOpenConnectionAsync();
+services.AddDbContextPool<MyDbContext>(options =>
+{
+    options.UseSqlServer(conn);
+});
+```
+
+**DbContext Factory:**
+```csharp
+services.AddDbContextFactory<MyDbContext>((provider, options) =>
+{
+    var conn = client.GetOpenConnectionAsync().GetAwaiter().GetResult();
+    options.UseSqlServer(conn);
+});
+```
+
+**Async Context Creation:**
+```csharp
+var optionsBuilder = new DbContextOptionsBuilder<MyDbContext>();
+await optionsBuilder.UseSynapseSqlPoolClientAsync(client);
+using var context = new MyDbContext(optionsBuilder.Options);
+```
+```
+
 ## Extensibility: Custom Connection Factories
 You can inject your own `ISqlConnectionFactory` for advanced scenarios (e.g., custom logging, connection pooling, or testability):
 ```csharp
