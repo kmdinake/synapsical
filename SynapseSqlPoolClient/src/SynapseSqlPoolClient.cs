@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -35,12 +36,13 @@ namespace Synapsical.Synapse.SqlPool.Client
             string? clientId = null,
             string? tenantId = null,
             TokenCredential? credential = null,
-            ILogger<SynapseSqlPoolClient>? logger = null)
+            ILogger<SynapseSqlPoolClient>? logger = null,
+            ISqlConnectionFactory? factory = null)
         {
             if (string.IsNullOrWhiteSpace(sqlPoolEndpoint))
                 throw new ArgumentException("SQL Pool endpoint must not be null or empty.", nameof(sqlPoolEndpoint));
             _logger = logger;
-            _connectionFactory = new DefaultSqlConnectionFactory(
+            _connectionFactory = factory ?? new DefaultSqlConnectionFactory(
                 sqlPoolEndpoint,
                 database,
                 authMode,
@@ -65,7 +67,7 @@ namespace Synapsical.Synapse.SqlPool.Client
             _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
         }
 
-        public async Task<SqlConnection> GetOpenConnectionAsync(CancellationToken cancellationToken = default)
+        public async Task<DbConnection> GetOpenConnectionAsync(CancellationToken cancellationToken = default)
         {
             return await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         }
@@ -88,7 +90,7 @@ namespace Synapsical.Synapse.SqlPool.Client
             try
             {
                 var sql = $"CREATE TABLE {tableName} {schemaDefinition}";
-                using var conn = await GetOpenConnectionAsync();
+                using var conn = (SqlConnection)await GetOpenConnectionAsync();
                 using var cmd = new SqlCommand(sql, conn);
                 await cmd.ExecuteNonQueryAsync();
                 _diagnosticListener.StopActivity(createTableActivity, new { TableName = tableName, SchemaDefinition = schemaDefinition });
@@ -123,7 +125,7 @@ namespace Synapsical.Synapse.SqlPool.Client
             try
             {
                 var sql = $"DROP TABLE IF EXISTS {tableName}";
-                using var conn = await GetOpenConnectionAsync();
+                using var conn = (SqlConnection)await GetOpenConnectionAsync();
                 using var cmd = new SqlCommand(sql, conn);
                 await cmd.ExecuteNonQueryAsync();
                 _diagnosticListener.StopActivity(dropTableActivity, new { TableName = tableName });
@@ -153,7 +155,7 @@ namespace Synapsical.Synapse.SqlPool.Client
             try
             {
                 var sql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = @tableName";
-                using var conn = await GetOpenConnectionAsync();
+                using var conn = (SqlConnection)await GetOpenConnectionAsync();
                 using var cmd = new SqlCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@tableName", tableName);
                 var scalarResult = await cmd.ExecuteScalarAsync();
@@ -184,7 +186,7 @@ namespace Synapsical.Synapse.SqlPool.Client
             {
                 var sql = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'";
                 var tables = new List<string>();
-                using var conn = await GetOpenConnectionAsync();
+                using var conn = (SqlConnection)await GetOpenConnectionAsync();
                 using var cmd = new SqlCommand(sql, conn);
                 using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
@@ -223,7 +225,7 @@ namespace Synapsical.Synapse.SqlPool.Client
                 var columns = string.Join(", ", rowData.Keys);
                 var parameters = string.Join(", ", rowData.Keys.Select(k => "@" + k));
                 var sql = $"INSERT INTO {tableName} ({columns}) VALUES ({parameters})";
-                using var conn = await GetOpenConnectionAsync();
+                using var conn = (SqlConnection)await GetOpenConnectionAsync();
                 using var cmd = new SqlCommand(sql, conn);
                 foreach (var kvp in rowData)
                 {
@@ -257,7 +259,7 @@ namespace Synapsical.Synapse.SqlPool.Client
             try
             {
                 var results = new List<IDictionary<string, object>>();
-                using var conn = await GetOpenConnectionAsync();
+                using var conn = (SqlConnection)await GetOpenConnectionAsync();
                 using var cmd = new SqlCommand(sqlQuery, conn);
                 using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
@@ -303,7 +305,7 @@ namespace Synapsical.Synapse.SqlPool.Client
             {
                 var setClause = string.Join(", ", updatedValues.Keys.Select(k => $"{k} = @{k}"));
                 var sql = $"UPDATE {tableName} SET {setClause} WHERE {whereClause}";
-                using var conn = await GetOpenConnectionAsync();
+                using var conn = (SqlConnection)await GetOpenConnectionAsync();
                 using var cmd = new SqlCommand(sql, conn);
                 foreach (var kvp in updatedValues)
                 {
@@ -339,7 +341,7 @@ namespace Synapsical.Synapse.SqlPool.Client
             try
             {
                 var sql = $"DELETE FROM {tableName} WHERE {whereClause}";
-                using var conn = await GetOpenConnectionAsync();
+                using var conn = (SqlConnection)await GetOpenConnectionAsync();
                 using var cmd = new SqlCommand(sql, conn);
                 await cmd.ExecuteNonQueryAsync();
                 _logger?.LogInformation("Successfully deleted rows from {TableName}", tableName);

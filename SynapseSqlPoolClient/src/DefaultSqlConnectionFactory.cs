@@ -1,4 +1,5 @@
 using System;
+using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
@@ -45,7 +46,7 @@ namespace Synapsical.Synapse.SqlPool.Client
             _credential = credential;
         }
 
-        public async Task<SqlConnection> CreateOpenConnectionAsync(CancellationToken cancellationToken = default)
+        public async Task<DbConnection> CreateOpenConnectionAsync(CancellationToken cancellationToken = default)
         {
             var builder = new SqlConnectionStringBuilder
             {

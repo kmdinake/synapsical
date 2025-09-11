@@ -1,6 +1,5 @@
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace Synapsical.Synapse.SqlPool.Client
@@ -18,7 +17,7 @@ namespace Synapsical.Synapse.SqlPool.Client
             SynapseSqlPoolClient client,
             CancellationToken cancellationToken = default)
         {
-            SqlConnection conn = await client.GetOpenConnectionAsync(cancellationToken);
+            var conn = await client.GetOpenConnectionAsync(cancellationToken);
             optionsBuilder.UseSqlServer(conn);
         }
     }
