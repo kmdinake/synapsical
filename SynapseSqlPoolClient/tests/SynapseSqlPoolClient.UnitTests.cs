@@ -13,7 +13,7 @@ namespace Synapsical.Synapse.SqlPool.Client.Tests
         [Fact]
         public void Can_Construct_With_All_Auth_Modes()
         {
-            var mockFactory = new Mock<ISqlConnectionFactory>().Object;
+            var mockFactory = new Mock<IDbConnectionFactory>().Object;
             var loggerMock = new Mock<ILogger<SynapseSqlPoolClient>>().Object;
             // SQL Password
             var c1 = new SynapseSqlPoolClient("server", "master", SqlAuthMode.SqlPassword, "user", "pass", logger: loggerMock);

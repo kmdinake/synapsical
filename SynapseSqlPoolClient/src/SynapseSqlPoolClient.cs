@@ -18,7 +18,7 @@ namespace Synapsical.Synapse.SqlPool.Client
     public class SynapseSqlPoolClient
     {
         private readonly ILogger<SynapseSqlPoolClient>? _logger;
-        private readonly ISqlConnectionFactory _connectionFactory;
+        private readonly IDbConnectionFactory _connectionFactory;
         private static readonly string s_diagnosticNamespace = "Synapsical.Synapse.SqlPool.Client";
         private static DiagnosticSource? _diagnosticListener;
 
@@ -37,7 +37,7 @@ namespace Synapsical.Synapse.SqlPool.Client
             string? tenantId = null,
             TokenCredential? credential = null,
             ILogger<SynapseSqlPoolClient>? logger = null,
-            ISqlConnectionFactory? factory = null)
+            IDbConnectionFactory? factory = null)
         {
             if (string.IsNullOrWhiteSpace(sqlPoolEndpoint))
                 throw new ArgumentException("SQL Pool endpoint must not be null or empty.", nameof(sqlPoolEndpoint));
@@ -54,12 +54,12 @@ namespace Synapsical.Synapse.SqlPool.Client
         }
 
         /// <summary>
-        /// For testing: allows injection of a custom ISqlConnectionFactory.
+        /// For testing: allows injection of a custom IDbConnectionFactory.
         /// </summary>
         /// <summary>
-        /// For testing: allows injection of a custom ISqlConnectionFactory.
+        /// For testing: allows injection of a custom IDbConnectionFactory.
         /// </summary>
-        public SynapseSqlPoolClient(string sqlPoolEndpoint, ISqlConnectionFactory connectionFactory, ILogger<SynapseSqlPoolClient>? logger = null)
+        public SynapseSqlPoolClient(string sqlPoolEndpoint, IDbConnectionFactory connectionFactory, ILogger<SynapseSqlPoolClient>? logger = null)
         {
             if (string.IsNullOrWhiteSpace(sqlPoolEndpoint))
                 throw new ArgumentException("SQL Pool endpoint must not be null or empty.", nameof(sqlPoolEndpoint));

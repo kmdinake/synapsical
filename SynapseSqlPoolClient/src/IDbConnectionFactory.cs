@@ -7,7 +7,7 @@ namespace Synapsical.Synapse.SqlPool.Client
     /// <summary>
     /// Abstraction for creating DbConnection instances.
     /// </summary>
-    public interface ISqlConnectionFactory
+    public interface IDbConnectionFactory
     {
         Task<DbConnection> CreateOpenConnectionAsync(CancellationToken cancellationToken = default);
     }

@@ -30,7 +30,7 @@ namespace Synapsical.Synapse.SqlPool.Client.Tests
         public async Task UseSynapseSqlPoolClientAsync_ConfiguresOptionsBuilder_WithOpenConnection()
         {
             var fakeConn = new FakeDbConnection();
-            var mockFactory = new Mock<ISqlConnectionFactory>();
+            var mockFactory = new Mock<IDbConnectionFactory>();
             mockFactory.Setup(f => f.CreateOpenConnectionAsync(It.IsAny<CancellationToken>())).ReturnsAsync(fakeConn);
             var client = new SynapseSqlPoolClient("server", factory: mockFactory.Object);
             var optionsBuilder = new DbContextOptionsBuilder<DbContext>();
@@ -45,7 +45,7 @@ namespace Synapsical.Synapse.SqlPool.Client.Tests
         public async Task UseSynapseSqlPoolClientAsync_AllowsAsyncContextCreation()
         {
             var fakeConn = new FakeDbConnection();
-            var mockFactory = new Mock<ISqlConnectionFactory>();
+            var mockFactory = new Mock<IDbConnectionFactory>();
             mockFactory.Setup(f => f.CreateOpenConnectionAsync(It.IsAny<CancellationToken>())).ReturnsAsync(fakeConn);
             var client = new SynapseSqlPoolClient("server", factory: mockFactory.Object);
             var optionsBuilder = new DbContextOptionsBuilder<DbContext>();
@@ -59,7 +59,7 @@ namespace Synapsical.Synapse.SqlPool.Client.Tests
         public async Task UseSynapseSqlPoolClientAsync_CanBeUsedWithContextPooling()
         {
             var fakeConn = new FakeDbConnection();
-            var mockFactory = new Mock<ISqlConnectionFactory>();
+            var mockFactory = new Mock<IDbConnectionFactory>();
             mockFactory.Setup(f => f.CreateOpenConnectionAsync(It.IsAny<CancellationToken>())).ReturnsAsync(fakeConn);
             var client = new SynapseSqlPoolClient("server", factory: mockFactory.Object);
 
@@ -77,7 +77,7 @@ namespace Synapsical.Synapse.SqlPool.Client.Tests
         public async Task UseSynapseSqlPoolClientAsync_CanBeUsedWithDbContextFactory()
         {
             var fakeConn = new FakeDbConnection();
-            var mockFactory = new Mock<ISqlConnectionFactory>();
+            var mockFactory = new Mock<IDbConnectionFactory>();
             mockFactory.Setup(f => f.CreateOpenConnectionAsync(It.IsAny<CancellationToken>())).ReturnsAsync(fakeConn);
             var client = new SynapseSqlPoolClient("server", factory: mockFactory.Object);
 

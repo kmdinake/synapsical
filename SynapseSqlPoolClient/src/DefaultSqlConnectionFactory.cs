@@ -8,9 +8,9 @@ using Microsoft.Data.SqlClient;
 namespace Synapsical.Synapse.SqlPool.Client
 {
     /// <summary>
-    /// Default implementation of ISqlConnectionFactory.
+    /// Default implementation of IDbConnectionFactory.
     /// </summary>
-    public class DefaultSqlConnectionFactory : ISqlConnectionFactory
+    public class DefaultSqlConnectionFactory : IDbConnectionFactory
     {
         private readonly string _server;
         private readonly string _database;
