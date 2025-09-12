@@ -35,7 +35,6 @@ namespace Synapsical.Synapse.SqlPool.Client
                 throw new ArgumentNullException(nameof(server));
             if (string.IsNullOrWhiteSpace(database))
                 throw new ArgumentNullException(nameof(database));
-            
             _server = server;
             _database = database;
             _authMode = authMode;

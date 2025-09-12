@@ -162,7 +162,7 @@ var optionsBuilder = new DbContextOptionsBuilder<MyDbContext>();
 await optionsBuilder.UseSynapseSqlPoolClientAsync(client);
 using var context = new MyDbContext(optionsBuilder.Options);
 ```
-```
+
 
 ## Extensibility: Custom Connection Factories
 You can inject your own `ISqlConnectionFactory` for advanced scenarios (e.g., custom logging, connection pooling, or testability):

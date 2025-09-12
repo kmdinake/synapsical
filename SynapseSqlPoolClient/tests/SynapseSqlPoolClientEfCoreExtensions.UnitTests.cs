@@ -26,13 +26,19 @@ namespace Synapsical.Synapse.SqlPool.Client.Tests
 
     public class SynapseSqlPoolClientEfCoreExtensionsTests
     {
-        [Fact]
-        public async Task UseSynapseSqlPoolClientAsync_ConfiguresOptionsBuilder_WithOpenConnection()
+        internal static SynapseSqlPoolClient GetSynapseSqlPoolClient(FakeDbConnection conn = null)
         {
-            var fakeConn = new FakeDbConnection();
+            var fakeConn = conn ?? new FakeDbConnection();
             var mockFactory = new Mock<IDbConnectionFactory>();
             mockFactory.Setup(f => f.CreateOpenConnectionAsync(It.IsAny<CancellationToken>())).ReturnsAsync(fakeConn);
             var client = new SynapseSqlPoolClient("server", factory: mockFactory.Object);
+            return client;
+        }
+
+        [Fact]
+        public async Task UseSynapseSqlPoolClientAsync_ConfiguresOptionsBuilder_WithOpenConnection()
+        {
+            var client = GetSynapseSqlPoolClient();
             var optionsBuilder = new DbContextOptionsBuilder<DbContext>();
             await optionsBuilder.UseSynapseSqlPoolClientAsync(client);
 
@@ -44,10 +50,7 @@ namespace Synapsical.Synapse.SqlPool.Client.Tests
         [Fact]
         public async Task UseSynapseSqlPoolClientAsync_AllowsAsyncContextCreation()
         {
-            var fakeConn = new FakeDbConnection();
-            var mockFactory = new Mock<IDbConnectionFactory>();
-            mockFactory.Setup(f => f.CreateOpenConnectionAsync(It.IsAny<CancellationToken>())).ReturnsAsync(fakeConn);
-            var client = new SynapseSqlPoolClient("server", factory: mockFactory.Object);
+            var client = GetSynapseSqlPoolClient();
             var optionsBuilder = new DbContextOptionsBuilder<DbContext>();
             await optionsBuilder.UseSynapseSqlPoolClientAsync(client);
 
@@ -56,13 +59,9 @@ namespace Synapsical.Synapse.SqlPool.Client.Tests
         }
 
         [Fact]
-        public async Task UseSynapseSqlPoolClientAsync_CanBeUsedWithContextPooling()
+        public void UseSynapseSqlPoolClientAsync_CanBeUsedWithContextPooling()
         {
-            var fakeConn = new FakeDbConnection();
-            var mockFactory = new Mock<IDbConnectionFactory>();
-            mockFactory.Setup(f => f.CreateOpenConnectionAsync(It.IsAny<CancellationToken>())).ReturnsAsync(fakeConn);
-            var client = new SynapseSqlPoolClient("server", factory: mockFactory.Object);
-
+            var client = GetSynapseSqlPoolClient();
             var services = new ServiceCollection();
             services.AddDbContextPool<DbContext>(async options =>
             {
@@ -74,13 +73,10 @@ namespace Synapsical.Synapse.SqlPool.Client.Tests
         }
 
         [Fact]
-        public async Task UseSynapseSqlPoolClientAsync_CanBeUsedWithDbContextFactory()
+        public void UseSynapseSqlPoolClientAsync_CanBeUsedWithDbContextFactory()
         {
             var fakeConn = new FakeDbConnection();
-            var mockFactory = new Mock<IDbConnectionFactory>();
-            mockFactory.Setup(f => f.CreateOpenConnectionAsync(It.IsAny<CancellationToken>())).ReturnsAsync(fakeConn);
-            var client = new SynapseSqlPoolClient("server", factory: mockFactory.Object);
-
+            var client = GetSynapseSqlPoolClient(fakeConn);
             var services = new ServiceCollection();
             services.AddDbContextFactory<DbContext>((provider, options) =>
             {
