@@ -165,7 +165,7 @@ using var context = new MyDbContext(optionsBuilder.Options);
 
 
 ## Extensibility: Custom Connection Factories
-You can inject your own `ISqlConnectionFactory` for advanced scenarios (e.g., custom logging, connection pooling, or testability):
+You can inject your own `IDbConnectionFactory` for advanced scenarios (e.g., custom logging, connection pooling, or testability):
 ```csharp
 var customFactory = new MyCustomSqlConnectionFactory(...);
 var client = new SynapseSqlPoolClient("<server>", customFactory);
