@@ -10,7 +10,7 @@ namespace EFCoreUsageExample
         {
             Id = id;
             Name = name;
-            Position = position;    
+            Position = position;
         }
 
         public static Employee Ghost => new("Ghost", "N/A", Guid.Empty);
