@@ -14,9 +14,14 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/kmdinake/synapsical</RepositoryUrl>
     <PackageTags>azure;synapse;dotnet;client;ef-core;</PackageTags>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
   </PropertyGroup>
   <ItemGroup>
     <None Include="..\..\..\..\Users\kdinake\OneDrive - Deloitte (O365D)\Downloads\synapsical-logo.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\..\LICENSE">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
