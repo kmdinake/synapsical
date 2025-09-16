@@ -1,9 +1,30 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <LangVersion>10.0</LangVersion>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <SignAssembly>False</SignAssembly>
+    <PackageId>Synapsical.SynapseSqlPoolClient</PackageId>
+    <Title>Synapsical - Azure Synapse SqlPool .NET Client Library</Title>
+    <Authors>Keoagile Dinake</Authors>
+    <Description>Synapsical is a .NET client library that enables a user to easily connect to Azure Synapse data from .NET applications.</Description>
+    <PackageProjectUrl>https://github.com/kmdinake/synapsical</PackageProjectUrl>
+    <PackageIcon>synapsical-logo.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/kmdinake/synapsical</RepositoryUrl>
+    <PackageTags>azure;synapse;dotnet;client;ef-core;</PackageTags>
   </PropertyGroup>
+  <ItemGroup>
+    <None Include="..\..\..\..\Users\kdinake\OneDrive - Deloitte (O365D)\Downloads\synapsical-logo.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.11.4" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.6" />
