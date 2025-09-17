@@ -1,5 +1,6 @@
-![Synapsical Logo](green-synapsical-logo.png)
 # Synapsical - Azure Synapse SqlPool .NET Client Library
+![Synapsical Logo](synapsical-logo.png)
+
 Synapsical is a .NET Client Library that enables .NET developers to connect to Azure Synapse Analytics SQL Pools and perform CRUD operations on tables and data. The library supports multiple authentication modes, including Azure AD (with or without MFA), SQL authentication, and service principals. It provides an async-first, thread-safe API for scalable applications.
 
 ## Features
@@ -18,7 +19,7 @@ Synapsical is a .NET Client Library that enables .NET developers to connect to A
 **Installation**
 Install via NuGet:
 ```shell
-dotnet add package Synapsical.Synapse.SqlPool.Client
+dotnet add package Synapsical.SynapseSqlPoolClient
 ```
 
 ## Usage
